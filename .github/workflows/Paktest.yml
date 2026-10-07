@@ -23,14 +23,30 @@ jobs:
         with:
           gradle-version: 8.7
 
+      - name: Unzip project if uploaded as ZIP
+        run: |
+          if [ -z "$(find . -name settings.gradle -not -path './.git/*' | head -n 1)" ]; then
+            ZIP=$(ls ./*.zip 2>/dev/null | head -n 1 || true)
+            if [ -n "$ZIP" ]; then
+              echo "Unzipping $ZIP"
+              unzip -o "$ZIP" -d project
+            fi
+          fi
+
       - name: Find project folder
         id: find
         run: |
           FILE=$(find . -name settings.gradle -not -path './.git/*' | head -n 1)
-          if [ -z "$FILE" ]; then echo "settings.gradle not found"; exit 1; fi
+          if [ -z "$FILE" ]; then echo "settings.gradle not found. Upload the project ZIP to the repo."; exit 1; fi
           DIR=$(dirname "$FILE")
           echo "Project folder: $DIR"
           echo "dir=$DIR" >> "$GITHUB_OUTPUT"
+          TTF=$(ls ./*.ttf 2>/dev/null | head -n 1 || true)
+          if [ -n "$TTF" ]; then
+            mkdir -p "$DIR/app/src/main/assets/fonts"
+            cp "$TTF" "$DIR/app/src/main/assets/fonts/jameel_noori_nastaleeq.ttf"
+            echo "Font copied: $TTF"
+          fi
 
       - name: Build debug APK
         working-directory: ${{ steps.find.outputs.dir }}
@@ -42,4 +58,3 @@ jobs:
           name: app-debug
           path: "**/build/outputs/apk/debug/*.apk"
           if-no-files-found: error
-          
